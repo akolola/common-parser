@@ -1,20 +1,9 @@
 package org.handytools;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
 import opennlp.tools.namefind.*;
-import opennlp.tools.util.InputStreamFactory;
-import opennlp.tools.util.ObjectStream;
-import opennlp.tools.util.PlainTextByLineStream;
-import opennlp.tools.util.TrainingParameters;
-
-import opennlp.tools.namefind.NameFinderME;
-import opennlp.tools.namefind.TokenNameFinderFactory;
-import opennlp.tools.namefind.TokenNameFinderModel;
+import opennlp.tools.util.*;
+import java.io.*;
+import java.util.Arrays;
 
 public class TrainCityNameFinder {
 
@@ -36,12 +25,24 @@ public class TrainCityNameFinder {
     private static TokenNameFinderModel trainModel(String trainingDataPath) throws IOException {
         InputStreamFactory inputStreamFactory = createInputStreamFactory(trainingDataPath);
         ObjectStream<String> lineStream = new PlainTextByLineStream(inputStreamFactory, "UTF-8");
-        ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream);
+        ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream) {
+            @Override
+            public NameSample read() throws IOException {
+                NameSample sample = super.read();
+                if (sample != null) {
+                    // Convert sentence tokens to lowercase
+                    String[] lowerCasedTokens = Arrays.stream(sample.getSentence())
+                            .map(String::toLowerCase)
+                            .toArray(String[]::new);
+                    return new NameSample(lowerCasedTokens, sample.getNames(), sample.isClearAdaptiveDataSet());
+                }
+                return null;
+            }
+        };
 
         TrainingParameters params = new TrainingParameters();
         params.put(TrainingParameters.ITERATIONS_PARAM, 100);
         params.put(TrainingParameters.CUTOFF_PARAM, 1);
-
 
         return NameFinderME.train(
                 "en",
@@ -64,3 +65,4 @@ public class TrainCityNameFinder {
         return () -> new FileInputStream(trainingDataPath);
     }
 }
+

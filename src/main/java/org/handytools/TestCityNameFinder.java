@@ -32,7 +32,7 @@ public class TestCityNameFinder {
         }
     }
 
-    // Read the content of the city-text.txt file
+    // Read the content of the city-name-text.txt file
     private static String readFileContent(String filePath) throws IOException {
         StringBuilder textBuilder = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
@@ -44,39 +44,39 @@ public class TestCityNameFinder {
         return textBuilder.toString();
     }
 
-
+    // Tokenize the content and find city names using the model
     private static void findCityNames(TokenNameFinderModel model, String content) {
+        // Create a NameFinder using the model
         NameFinderME nameFinder = new NameFinderME(model);
-        SimpleTokenizer tokenizer = SimpleTokenizer.INSTANCE;
-        String[] tokens = tokenizer.tokenize(content);
 
+        // Tokenize the content and convert tokens to lowercase
+        SimpleTokenizer tokenizer = SimpleTokenizer.INSTANCE;
+        String[] tokens = tokenizer.tokenize(content.toLowerCase());
+
+        // Find city names
         Span[] spans = nameFinder.find(tokens);
 
-        // List of country names to exclude
-        Set<String> countryNames = new HashSet<>(Arrays.asList("California", "Germany", "China", "France"));
+        // List of country names to exclude (all in lowercase)
+        Set<String> countryNames = new HashSet<>(Arrays.asList(
+                "california", "russia", "germany", "china", "france", "japan", "usa", "canada", "brazil", "australia"
+        ));
 
         System.out.println("Found the following city names:");
         for (Span span : spans) {
             StringBuilder name = new StringBuilder();
             for (int i = span.getStart(); i < span.getEnd(); i++) {
-                // Append token to city name and remove punctuation
+                // Clean and remove commas or periods from the token
                 String cleanToken = tokens[i].replaceAll("[,\\.]", "");
                 name.append(cleanToken).append(" ");
             }
-
             String cityName = name.toString().trim();
-            // Split merged values but keep multi-word cities intact (remove punctuation after joining)
+            // Check if the cityName is not a country
             if (!countryNames.contains(cityName)) {
                 System.out.println(cityName);
             }
         }
 
+        // Clear adaptive data to avoid bias
         nameFinder.clearAdaptiveData();
     }
-
-
-
-
-
-
 }
